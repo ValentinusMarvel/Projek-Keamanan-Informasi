@@ -1,0 +1,82 @@
+{
+  "framework": "flower",
+  "strategy": "FedAvg",
+  "num_clients": 5,
+  "client_sizes": [
+    2279,
+    2279,
+    2279,
+    2278,
+    2278
+  ],
+  "rounds": 5,
+  "local_epochs": 1,
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "final_global_loss": 3.9383820215861003,
+  "final_global_accuracy": 0.02106002106002106,
+  "history": [
+    {
+      "round": 1,
+      "global_loss": 3.933780887391832,
+      "global_accuracy": 0.023166023166023165
+    },
+    {
+      "round": 2,
+      "global_loss": 3.933780887391832,
+      "global_accuracy": 0.023166023166023165
+    },
+    {
+      "round": 3,
+      "global_loss": 3.933780887391832,
+      "global_accuracy": 0.023166023166023165
+    },
+    {
+      "round": 4,
+      "global_loss": 3.933780887391832,
+      "global_accuracy": 0.023166023166023165
+    },
+    {
+      "round": 5,
+      "global_loss": 3.933780887391832,
+      "global_accuracy": 0.023166023166023165
+    }
+  ],
+  "label_count": 51,
+  "sample_count": 14242,
+  "local_epsilon": 0.77,
+  "local_delta": 1e-05,
+  "metrics": {
+    "loss": 3.9383820215861003,
+    "accuracy": 0.02106002106002106,
+    "precision": 0.0004435244870485305,
+    "recall": 0.02106002106002106,
+    "f1": 0.0008687530172576582,
+    "eer": 0.339117890817303,
+    "far_at_eer": 0.339117890817303,
+    "frr_at_eer": 0.339117890817303,
+    "far_fixed_1.0": 1.0,
+    "frr_fixed_1.0": 0.0
+  },
+  "local_performance": {
+    "individual_client_accuracies": [
+      0.01929824561403509,
+      0.02631578947368421,
+      0.017543859649122806,
+      0.021052631578947368,
+      0.0210896309314587
+    ],
+    "mean_accuracy": 0.021060031449449634,
+    "std_accuracy": 0.002935686521275925,
+    "min_accuracy": 0.017543859649122806,
+    "max_accuracy": 0.02631578947368421
+  },
+  "latency_seconds": 62.5,
+  "communication": {
+    "model_size_kb": 224.0,
+    "bytes_per_client_per_round": 458752,
+    "total_clients": 5,
+    "rounds": 5,
+    "total_bandwidth_mb": 10.94
+  }
+}

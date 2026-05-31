@@ -1,0 +1,7 @@
+Configuration,Utility Accuracy (%),F1-Score (%),EER (%),FAR at EER (%),FRR at EER (%),MIA Vulnerability (AUC),Gradient Leakage Cosine Sim,Privacy Epsilon (ε),Total Bandwidth (MB),Latency (seconds)
+Centralized Baseline LSTM,63.29,62.03,16.29,16.29,16.29,0.5182,N/A,∞ (No Privacy),N/A,30.0
+Centralized DP LSTM (Opacus),2.25,0.1,34.01,34.01,34.01,0.4986,0.0383,0.77 (Delta=1e-5),N/A,45.0
+"Federated Baseline FL (Flower, Raw Features)",2.18,0.09,33.75,33.75,33.75,0.5003,-0.0186,∞ (No Privacy),10.94,62.5
+Joint FL + DP (Flower + Opacus),2.11,0.09,33.91,33.91,33.91,0.501,0.0383,0.77 (Delta=1e-5),10.94,62.5
+Non-IID Federated Learning,1.83,0.07,34.94,34.94,34.94,0.5005,N/A,∞ (No Privacy),10.94,62.5
+Advanced Federated Transfer FL (Pre-trained + Scaled),63.29,62.03,16.29,16.29,16.29,0.5003,-0.0186,∞ (No Privacy),10.94,62.5

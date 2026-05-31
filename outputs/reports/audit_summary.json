@@ -1,0 +1,149 @@
+{
+  "file": "C:\\Users\\anang\\Downloads\\Projek Keamanan Informasi\\data\\raw\\DSL-StrongPasswordData.csv",
+  "shape": [
+    20400,
+    34
+  ],
+  "columns": [
+    "subject",
+    "sessionindex",
+    "rep",
+    "h.period",
+    "dd.period.t",
+    "ud.period.t",
+    "h.t",
+    "dd.t.i",
+    "ud.t.i",
+    "h.i",
+    "dd.i.e",
+    "ud.i.e",
+    "h.e",
+    "dd.e.five",
+    "ud.e.five",
+    "h.five",
+    "dd.five.shift.r",
+    "ud.five.shift.r",
+    "h.shift.r",
+    "dd.shift.r.o",
+    "ud.shift.r.o",
+    "h.o",
+    "dd.o.a",
+    "ud.o.a",
+    "h.a",
+    "dd.a.n",
+    "ud.a.n",
+    "h.n",
+    "dd.n.l",
+    "ud.n.l",
+    "h.l",
+    "dd.l.return",
+    "ud.l.return",
+    "h.return"
+  ],
+  "distribution": {
+    "subject": {
+      "unique": 51,
+      "top_counts": {
+        "s002": 400,
+        "s003": 400,
+        "s004": 400,
+        "s005": 400,
+        "s007": 400,
+        "s008": 400,
+        "s010": 400,
+        "s011": 400,
+        "s012": 400,
+        "s013": 400
+      }
+    },
+    "sessionindex": {
+      "unique": 8,
+      "top_counts": {
+        "1": 2550,
+        "2": 2550,
+        "3": 2550,
+        "4": 2550,
+        "5": 2550,
+        "6": 2550,
+        "7": 2550,
+        "8": 2550
+      }
+    },
+    "rep": {
+      "unique": 50,
+      "top_counts": {
+        "1": 408,
+        "2": 408,
+        "3": 408,
+        "4": 408,
+        "5": 408,
+        "6": 408,
+        "7": 408,
+        "8": 408,
+        "9": 408,
+        "10": 408
+      }
+    }
+  },
+  "relation_check": {
+    "checked_triplets": 8,
+    "triplets": [
+      {
+        "dd_col": "dd.period.t",
+        "pairs": 20400,
+        "mean_abs": 9.272607191883087e-18,
+        "max_abs": 4.440892098500626e-16,
+        "within_tol_ratio": 1.0
+      },
+      {
+        "dd_col": "dd.t.i",
+        "pairs": 20400,
+        "mean_abs": 6.196555557612693e-18,
+        "max_abs": 4.440892098500626e-16,
+        "within_tol_ratio": 1.0
+      },
+      {
+        "dd_col": "dd.i.e",
+        "pairs": 20400,
+        "mean_abs": 5.9563728881079625e-18,
+        "max_abs": 4.440892098500626e-16,
+        "within_tol_ratio": 1.0
+      },
+      {
+        "dd_col": "dd.e.five",
+        "pairs": 20400,
+        "mean_abs": 1.341668300151621e-17,
+        "max_abs": 8.881784197001252e-16,
+        "within_tol_ratio": 1.0
+      },
+      {
+        "dd_col": "dd.o.a",
+        "pairs": 20400,
+        "mean_abs": 5.761407826855716e-18,
+        "max_abs": 4.440892098500626e-16,
+        "within_tol_ratio": 1.0
+      },
+      {
+        "dd_col": "dd.a.n",
+        "pairs": 20400,
+        "mean_abs": 5.666688948826125e-18,
+        "max_abs": 2.220446049250313e-16,
+        "within_tol_ratio": 1.0
+      },
+      {
+        "dd_col": "dd.n.l",
+        "pairs": 20400,
+        "mean_abs": 7.578286190980959e-18,
+        "max_abs": 2.220446049250313e-16,
+        "within_tol_ratio": 1.0
+      },
+      {
+        "dd_col": "dd.l.return",
+        "pairs": 20400,
+        "mean_abs": 1.1266858905540345e-17,
+        "max_abs": 8.881784197001252e-16,
+        "within_tol_ratio": 1.0
+      }
+    ]
+  }
+}

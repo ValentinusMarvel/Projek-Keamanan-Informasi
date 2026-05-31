@@ -1,0 +1,26 @@
+{
+  "baseline": {
+    "attack_accuracy": 0.8663287086446104,
+    "attack_precision": 0.8663287086446104,
+    "attack_recall": 1.0,
+    "attack_auc": 0.5181967447919068
+  },
+  "dp": {
+    "attack_accuracy": 0.7999063889538965,
+    "attack_precision": 0.7999063889538965,
+    "attack_recall": 1.0,
+    "attack_auc": 0.49864015412042884
+  },
+  "fl": {
+    "attack_accuracy": 0.7999063889538965,
+    "attack_precision": 0.7999063889538965,
+    "attack_recall": 1.0,
+    "attack_auc": 0.500277854769555
+  },
+  "fl_dp": {
+    "attack_accuracy": 0.7999063889538965,
+    "attack_precision": 0.7999063889538965,
+    "attack_recall": 1.0,
+    "attack_auc": 0.5009582909878558
+  }
+}

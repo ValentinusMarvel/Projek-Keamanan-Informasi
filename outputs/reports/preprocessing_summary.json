@@ -1,0 +1,10 @@
+{
+  "source_file": "C:\\Users\\anang\\Downloads\\Projek Keamanan Informasi\\data\\raw\\DSL-StrongPasswordData.csv",
+  "features_shape": [
+    14242,
+    11,
+    3
+  ],
+  "labels_len": 14242,
+  "sequence_length": 11
+}

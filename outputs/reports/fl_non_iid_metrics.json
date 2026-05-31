@@ -1,0 +1,87 @@
+{
+  "framework": "flower",
+  "strategy": "FedAvg",
+  "num_clients": 5,
+  "client_sizes": [
+    2437,
+    2379,
+    2153,
+    2272,
+    2152
+  ],
+  "speed_scalers": [
+    1.25,
+    0.75,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "rounds": 5,
+  "local_epochs": 1,
+  "batch_size": 64,
+  "learning_rate": 0.001,
+  "final_global_loss": 3.9359075493282742,
+  "final_global_accuracy": 0.018252018252018252,
+  "history": [
+    {
+      "round": 1,
+      "global_loss": 3.948118225733439,
+      "global_accuracy": 0.023517023517023516
+    },
+    {
+      "round": 2,
+      "global_loss": 4.03798345459832,
+      "global_accuracy": 0.023517023517023516
+    },
+    {
+      "round": 3,
+      "global_loss": 4.012799411349826,
+      "global_accuracy": 0.023517023517023516
+    },
+    {
+      "round": 4,
+      "global_loss": 4.013162416881985,
+      "global_accuracy": 0.023517023517023516
+    },
+    {
+      "round": 5,
+      "global_loss": 3.9991456349690755,
+      "global_accuracy": 0.023517023517023516
+    }
+  ],
+  "label_count": 51,
+  "sample_count": 14242,
+  "metrics": {
+    "loss": 3.9359075493282742,
+    "accuracy": 0.018252018252018252,
+    "precision": 0.0003331361702720074,
+    "recall": 0.018252018252018252,
+    "f1": 0.0006543295064494651,
+    "eer": 0.349420500182816,
+    "far_at_eer": 0.349420500182816,
+    "frr_at_eer": 0.349420500182816,
+    "far_fixed_1.0": 1.0,
+    "frr_fixed_1.0": 0.0
+  },
+  "local_performance": {
+    "individual_client_accuracies": [
+      0.021052631578947368,
+      0.017543859649122806,
+      0.01929824561403509,
+      0.021052631578947368,
+      0.012302284710017574
+    ],
+    "mean_accuracy": 0.01824993062621404,
+    "std_accuracy": 0.003245990072188574,
+    "min_accuracy": 0.012302284710017574,
+    "max_accuracy": 0.021052631578947368
+  },
+  "latency_seconds": 62.5,
+  "communication": {
+    "model_size_kb": 224.0,
+    "bytes_per_client_per_round": 458752,
+    "total_clients": 5,
+    "rounds": 5,
+    "total_bandwidth_mb": 10.94
+  }
+}

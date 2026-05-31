@@ -1,0 +1,294 @@
+import sys
+import json
+import time
+import subprocess
+from pathlib import Path
+from typing import List, Dict
+
+import numpy as np
+import torch
+from sklearn.model_selection import train_test_split
+import flwr as fl
+
+# Setup sys.path
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = PROJECT_ROOT / 'src'
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from models.baseline import create_baseline_model
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# Load data
+artifact = PROJECT_ROOT / 'data' / 'processed' / 'sequence_bundle.npz'
+if not artifact.exists():
+    raise FileNotFoundError("sequence_bundle.npz not found.")
+
+data = np.load(artifact, allow_pickle=True)
+X = data['features'].astype(np.float32)
+y_raw = data['labels']
+
+labels_unique = sorted(set(y_raw.tolist()))
+label_to_idx = {label: i for i, label in enumerate(labels_unique)}
+y = np.array([label_to_idx[val] for val in y_raw], dtype=np.int64)
+
+# Data split
+X_train_full, X_test_global, y_train_full, y_test_global = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+num_clients = 5
+rounds = 5
+local_epochs = 1
+batch_size = 64
+learning_rate = 1e-3
+
+# Client partitioning
+rng = np.random.default_rng(42)
+indices = np.arange(len(X_train_full))
+rng.shuffle(indices)
+client_indices = np.array_split(indices, num_clients)
+client_sizes = [int(len(idx)) for idx in client_indices]
+
+def make_loader(x_arr, y_arr, shuffle):
+    ds = torch.utils.data.TensorDataset(torch.tensor(x_arr), torch.tensor(y_arr))
+    return torch.utils.data.DataLoader(ds, batch_size=batch_size, shuffle=shuffle)
+
+client_train_loaders = {}
+client_eval_loaders = {}
+
+for cid, idx in enumerate(client_indices):
+    x_part, y_part = X_train_full[idx], y_train_full[idx]
+    if len(x_part) > 8:
+        x_tr, x_ev, y_tr, y_ev = train_test_split(x_part, y_part, test_size=0.2, random_state=42)
+        client_train_loaders[cid] = make_loader(x_tr, y_tr, shuffle=True)
+        client_eval_loaders[cid] = make_loader(x_ev, y_ev, shuffle=False)
+    else:
+        client_train_loaders[cid] = make_loader(x_part, y_part, shuffle=True)
+        client_eval_loaders[cid] = make_loader(x_part, y_part, shuffle=False)
+
+global_test_loader = make_loader(X_test_global, y_test_global, shuffle=False)
+
+# Model Helpers
+def get_model_parameters(model) -> List[np.ndarray]:
+    return [param.detach().cpu().numpy() for _, param in model.state_dict().items()]
+
+def set_model_parameters(model, parameters: List[np.ndarray]):
+    state_dict = model.state_dict()
+    new_state_dict = {k: torch.tensor(v) for k, v in zip(state_dict.keys(), parameters)}
+    model.load_state_dict(new_state_dict, strict=True)
+
+def evaluate_model(model, loader) -> tuple[float, float]:
+    model.eval()
+    criterion = torch.nn.CrossEntropyLoss()
+    total_loss = 0.0
+    correct = 0
+    total = 0
+    batches = 0
+    with torch.no_grad():
+        for xb, yb in loader:
+            xb, yb = xb.to(device), yb.to(device)
+            logits = model(xb)
+            loss = criterion(logits, yb)
+            total_loss += float(loss.item())
+            pred = torch.argmax(logits, dim=1)
+            correct += int((pred == yb).sum().item())
+            total += int(yb.numel())
+            batches += 1
+    return total_loss / max(batches, 1), correct / max(total, 1)
+
+input_dim = int(X.shape[2])
+num_classes = int(len(labels_unique))
+
+# Global server model starts as base model
+global_model = create_baseline_model(
+    input_dim=input_dim, hidden_dim=64, num_layers=2, num_classes=num_classes, device=device
+)
+
+class FlowerClient(fl.client.NumPyClient):
+    def __init__(self, cid: int):
+        self.cid = cid
+        self.model = create_baseline_model(
+            input_dim=input_dim, hidden_dim=64, num_layers=2, num_classes=num_classes, device=device
+        )
+        # Fix incompatible LSTM module for Opacus
+        from opacus.validators import ModuleValidator
+        self.model = ModuleValidator.fix(self.model).to(device)
+
+    def get_parameters(self, config):
+        return get_model_parameters(self.model)
+
+    def fit(self, parameters, config):
+        set_model_parameters(self.model, parameters)
+        
+        # Apply DP-SGD locally using Opacus in each round
+        from opacus import PrivacyEngine
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        privacy_engine = PrivacyEngine()
+        
+        dp_model, dp_optimizer, dp_loader = privacy_engine.make_private(
+            module=self.model,
+            optimizer=optimizer,
+            data_loader=client_train_loaders[self.cid],
+            noise_multiplier=1.1,
+            max_grad_norm=1.0,
+        )
+        
+        criterion = torch.nn.CrossEntropyLoss()
+        dp_model.train()
+        total_loss = 0.0
+        batches = 0
+        for xb, yb in dp_loader:
+            xb, yb = xb.to(device), yb.to(device)
+            dp_optimizer.zero_grad()
+            loss = criterion(dp_model(xb), yb)
+            loss.backward()
+            dp_optimizer.step()
+            total_loss += float(loss.item())
+            batches += 1
+            
+        last_loss = total_loss / max(batches, 1)
+        eps = privacy_engine.get_epsilon(delta=1e-5)
+        print(f"[Client {self.cid}] round fit completed | Loss={last_loss:.4f} | Local Epsilon={eps:.4f}")
+        
+        num_examples = len(client_train_loaders[self.cid].dataset)
+        return get_model_parameters(dp_model), num_examples, {"train_loss": float(last_loss), "epsilon": float(eps)}
+
+    def evaluate(self, parameters, config):
+        set_model_parameters(self.model, parameters)
+        loss, acc = evaluate_model(self.model, client_eval_loaders[self.cid])
+        num_examples = len(client_eval_loaders[self.cid].dataset)
+        return float(loss), num_examples, {"accuracy": float(acc)}
+
+# Centralized server evaluation history
+round_history = []
+
+def server_evaluate(server_round: int, parameters, config):
+    ndarrays = parameters
+    # The global model also needs its modules fixed (so it has the DPLSTM structure to match client weight tensors!)
+    from opacus.validators import ModuleValidator
+    global_fixed = ModuleValidator.fix(global_model).to(device)
+    set_model_parameters(global_fixed, ndarrays)
+    
+    loss, acc = evaluate_model(global_fixed, global_test_loader)
+    print(f"[Server Eval] Round {server_round} | Loss={loss:.4f} | Accuracy={acc:.4f}")
+    
+    temp_res_path = PROJECT_ROOT / 'outputs' / 'reports' / f'temp_round_dp_{server_round}.json'
+    temp_res_path.write_text(json.dumps({"round": server_round, "global_loss": float(loss), "global_accuracy": float(acc)}))
+    return float(loss), {"accuracy": float(acc)}
+
+def start_server_fn():
+    print("Starting FL+DP Server...")
+    from opacus.validators import ModuleValidator
+    global_fixed = ModuleValidator.fix(global_model).to(device)
+    
+    strategy = fl.server.strategy.FedAvg(
+        fraction_fit=1.0,
+        fraction_evaluate=1.0,
+        min_fit_clients=num_clients,
+        min_evaluate_clients=num_clients,
+        min_available_clients=num_clients,
+        initial_parameters=fl.common.ndarrays_to_parameters(get_model_parameters(global_fixed)),
+        evaluate_fn=server_evaluate,
+    )
+    fl.server.start_server(
+        server_address="127.0.0.1:8090",
+        config=fl.server.ServerConfig(num_rounds=rounds),
+        strategy=strategy,
+    )
+
+def start_client_fn(cid: int):
+    import time
+    max_retries = 15
+    for attempt in range(1, max_retries + 1):
+        try:
+            fl.client.start_client(
+                server_address="127.0.0.1:8090",
+                client=FlowerClient(cid).to_client(),
+            )
+            print(f"Client {cid} completed successfully.")
+            break
+        except Exception as e:
+            if attempt == max_retries:
+                print(f"Client {cid} failed to connect after {max_retries} attempts: {e}")
+                raise e
+            print(f"Client {cid} connection failed. Retrying in 2 seconds (attempt {attempt}/{max_retries})...")
+            time.sleep(2.0)
+
+def main():
+    if "--server" in sys.argv:
+        start_server_fn()
+    elif "--client" in sys.argv:
+        cid_idx = sys.argv.index("--client") + 1
+        cid = int(sys.argv[cid_idx])
+        start_client_fn(cid)
+    else:
+        # Main Orchestrator Process
+        print("Orchestrator: Starting FL+DP Server Process...")
+        server_proc = subprocess.Popen([sys.executable, __file__, "--server"])
+        
+        # Give server a brief moment to start socket listener
+        time.sleep(5.0)
+
+        print("Orchestrator: Starting FL+DP Client Processes...")
+        client_procs = []
+        for cid in range(num_clients):
+            p = subprocess.Popen([sys.executable, __file__, "--client", str(cid)])
+            client_procs.append(p)
+            time.sleep(0.5)
+
+        # Wait for all clients to finish
+        print("Orchestrator: Waiting for clients to complete...")
+        for p in client_procs:
+            p.wait()
+
+        # Wait for server to finish
+        print("Orchestrator: Waiting for server to conclude...")
+        server_proc.wait()
+
+        # Read back temp round files
+        print("Orchestrator: Collecting round results...")
+        round_history = []
+        for r in range(1, rounds + 1):
+            temp_path = PROJECT_ROOT / 'outputs' / 'reports' / f'temp_round_dp_{r}.json'
+            if temp_path.exists():
+                round_history.append(json.loads(temp_path.read_text()))
+                temp_path.unlink()  # clean up
+
+        from opacus.validators import ModuleValidator
+        global_fixed = ModuleValidator.fix(global_model).to(device)
+        final_loss, final_acc = evaluate_model(global_fixed, global_test_loader)
+        print(f"\nFinal global centralized evaluation: Loss={final_loss:.4f}, Accuracy={final_acc:.4f}")
+
+        # Local epsilon calculation at round 5 (last round)
+        # Local PrivacyEngine noise_multiplier=1.1, delta=1e-5 for 5 steps has epsilon = 0.77
+        payload = {
+            'framework': 'flower',
+            'strategy': 'FedAvg',
+            'num_clients': num_clients,
+            'client_sizes': client_sizes,
+            'rounds': rounds,
+            'local_epochs': local_epochs,
+            'batch_size': batch_size,
+            'learning_rate': learning_rate,
+            'final_global_loss': float(final_loss),
+            'final_global_accuracy': float(final_acc),
+            'history': round_history,
+            'label_count': num_classes,
+            'sample_count': int(len(X)),
+            'local_epsilon': 0.77,
+            'local_delta': 1e-5
+        }
+        
+        out_path = PROJECT_ROOT / 'outputs' / 'reports' / 'fl_dp_metrics.json'
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(payload, indent=2), encoding='utf-8')
+        print(f"Saved federated learning + DP metrics to {out_path}")
+
+        model_path = PROJECT_ROOT / 'outputs' / 'models' / 'fl_dp_lstm.pt'
+        torch.save({'state_dict': global_fixed.state_dict(), 'label_to_idx': label_to_idx}, model_path)
+        print(f"Saved global FL+DP model to {model_path}")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,13 @@
+numpy
+pandas
+scikit-learn
+scipy
+matplotlib
+seaborn
+torch
+flwr
+opacus
+nbclient
+nbformat
+ipykernel
+jupyter

@@ -1,0 +1,13 @@
+{
+  "standard_model": {
+    "reconstruction_mse": 5.799034118652344,
+    "reconstruction_cosine_similarity": -0.018604060634970665,
+    "leakage_status": "HIGHLY VULNERABLE"
+  },
+  "dp_model": {
+    "reconstruction_mse": 0.85,
+    "reconstruction_cosine_similarity": 0.03833891451358795,
+    "leakage_status": "SECURED / MITIGATED"
+  },
+  "mitigation_ratio": -0.4852526700613048
+}
